@@ -39,6 +39,7 @@ BorderSurface {
   readonly property bool hovered: hoverTracker.hovered
 
   signal closeRequested()
+  signal removeRequested()
   signal cardClicked()
   // Prefer per-notification media/avatar data, then fall back to the app icon.
   // The `check` flag avoids Qt's missing-texture placeholder for unknown names.
@@ -195,6 +196,21 @@ BorderSurface {
           elide: Text.ElideRight
           maximumLineCount: 3
         }
+      }
+
+      PanelActionButton {
+        objectName: "removeNotification"
+        Layout.alignment: root.singleLineToast ? Qt.AlignVCenter : Qt.AlignTop
+        size: Style.space(26)
+        iconText: "×"
+        fontFamily: "Liberation Sans"
+        fontSize: Style.space(20)
+        foreground: Commons.Color.notifications.text
+        tooltipText: "移除通知"
+        Accessible.role: Accessible.Button
+        Accessible.name: tooltipText
+        Accessible.onPressAction: root.removeRequested()
+        onClicked: root.removeRequested()
       }
     }
 

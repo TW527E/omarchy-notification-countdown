@@ -1,5 +1,13 @@
 # Changes
 
+## 1.0.3
+
+- Remove the exact Notification Center entry after left-clicking a popup, preserving its existing open action.
+- Add an always-visible × button that removes the popup and center entry without opening anything.
+- Keep right-click dismissal and automatic expiry in history.
+- Send center removal after queued persistence finishes so delayed writes cannot recreate the removed source file.
+- Add regression coverage for action routing, exact-key removal, real QML mouse clicks, short/long card layouts and hover pause state.
+
 ## 1.0.2
 
 - Send notification JSON and image-copy metadata through stdin instead of process arguments.
