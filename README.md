@@ -2,6 +2,15 @@
 
 Adds a remaining-lifetime progress bar to notification popups and expires critical alerts after 15 seconds.
 
+This fork of [OrzSabaku/omarchy-notification-countdown](https://github.com/OrzSabaku/omarchy-notification-countdown)
+adds a visible × button and removes handled notifications from
+[Foamy Notification Center](https://github.com/foamrider/foamy-notification-center).
+Clicking the body opens the notification and removes its center entry; × removes
+it without opening. Right-click and automatic expiry keep history. The center
+integration is optional and uses its public `foamy.notification-center.store remove`
+IPC method. Without a compatible running center, popup actions still work and
+the popup service retains its normal history.
+
 ## Features
 
 - **Standard Notification Lifetimes**: Normal notifications retain upstream 8–30 second lifetimes; low-priority notifications retain 5–30 seconds.
@@ -11,6 +20,8 @@ Adds a remaining-lifetime progress bar to notification popups and expires critic
   - Hovering pauses both the timer and the progress bar.
   - Content updates reset the timer and bar.
   - Right-click dismisses a notification.
+  - Left-click opens the notification and removes that entry from Foamy Notification Center after persistence finishes. Right-click and timeout retain history.
+  - The × button removes a popup and its Notification Center entry without opening the notification.
   - Upstream actions, Do Not Disturb (DND), and history are fully retained.
 - **Configuration Note**: The critical notification duration is currently a constant defined in `Service.qml` (no settings UI yet).
 
@@ -21,7 +32,7 @@ This repository contains an Omarchy shell plugin with `manifest.json` at its roo
 To install the plugin from a normal desktop terminal:
 
 ```sh
-omarchy plugin add https://github.com/Desert-sabaku/omarchy-notification-countdown.git --enable
+omarchy plugin add https://github.com/TW527E/omarchy-notification-countdown.git --enable
 
 ```
 
@@ -87,6 +98,12 @@ python3 -m unittest discover -s tests -v
 QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= QT_STYLE_OVERRIDE=Fusion \
   QT_QUICK_CONTROLS_STYLE=Basic /usr/lib/qt6/bin/qmltestrunner -input tests/qml
 ```
+
+Version 1.0.3 was checked with 17 local tests (including actual QML mouse events),
+21 Notification Center action/removal tests, and an isolated D-Bus integration
+check covering open actions, × removal without activation, persistent removal,
+reload, right-click retention and expiry. The popup was rendered and inspected;
+physical mouse interaction on a live desktop is a separate check.
 
 > **Release Verification**:
 > Static validation and automated tests are provided, but a real desktop smoke test (verifying activation, normal operation, and stock service restoration) is required before declaring a verified release.

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "dotfiles.notifications",
   "name": "Notification countdown",
-  "version": "1.0.2",
-  "author": "Desert-sabaku",
-  "description": "Expire critical notifications after 15 seconds and display a remaining-lifetime bar.",
+  "version": "1.0.3",
+  "author": "Desert-sabaku, TW527E",
+  "description": "Notification countdown with click-to-remove history and a direct-dismiss button.",
   "kinds": [
     "service"
   ],
@@ -16,5 +16,5 @@
     "clonedFrom": "omarchy.notifications"
   },
   "license": "MIT",
-  "repository": "https://github.com/Desert-sabaku/omarchy-notification-countdown"
+  "repository": "https://github.com/TW527E/omarchy-notification-countdown"
 }

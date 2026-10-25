@@ -98,7 +98,7 @@ Item {
   // many `showHistory` can replay.
   readonly property int historyLimit: 10
 
-  readonly property string implementationVersion: "1.0.2"
+  readonly property string implementationVersion: "1.0.3"
   property int clockRevision: 0
 
   // Outside Variants: each notification has a single timer on all screens.
@@ -360,7 +360,12 @@ Item {
     // instead. Rows that never had a file (a history replay, the empty-history
     // placeholder) archive to nothing, which the move tolerates.
     if (entry) {
-      archivePopupFileFor(entry)
+      var handledKey = reason === "handled" && originalId >= 0
+        ? NotificationLogic.popupFileName(entry).replace(/\.json$/, "") : ""
+      // Remove only the clicked entry, after queued writes can no longer recreate it.
+      archivePopupFileFor(entry, handledKey ? function() {
+        Quickshell.execDetached(["omarchy-shell", "-q", "foamy.notification-center.store", "remove", handledKey])
+      } : null)
       if (restored) delete restoredPopups[NotificationLogic.popupFileName(entry)]
     }
     popupModel.remove(index)
@@ -394,7 +399,7 @@ Item {
     var argv = NotificationLogic.parseExecArgv(entry ? entry.execArgv : "")
     if (argv) {
       Util.execArgv(argv)
-      dismissPopup(index)
+      removePopup(index, "handled")
       return
     }
     // Restored rows have no live actions, and looking up liveRefs by their
@@ -421,7 +426,7 @@ Item {
     // focus their window. Fall back to focusing the sending app by class so
     // that click-to-jump actually works.
     if (!invoked) focusApp(entry)
-    dismissPopup(index)
+    removePopup(index, "handled")
   }
 
   // Try to focus an existing Hyprland window matching the notification's
@@ -550,10 +555,10 @@ Item {
 
   // ---------------------------------------------------- history
   //
-  function archivePopupFileFor(row) {
+  function archivePopupFileFor(row, done) {
     if (row) enqueuePopupFileJob("archive", {
       name: NotificationLogic.popupFileName(row), limit: historyLimit
-    })
+    }, done)
   }
 
   // Record a notification that never made it to the screen (DND silenced it),
@@ -1033,6 +1038,7 @@ Item {
               remainingLifetime: cardSlot.lifetimeClock ? cardSlot.lifetimeClock.remainingLifetime : 1
 
               onCloseRequested: service.dismissPopup(cardSlot.index)
+              onRemoveRequested: service.removePopup(cardSlot.index, "handled")
               onCardClicked: service.invokePopupDefault(cardSlot.index)
             }
           }
