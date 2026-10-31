@@ -1,5 +1,9 @@
 # Changes
 
+## 1.0.4
+
+- Show the × button's tooltip and accessible name in English, or in Chinese when the system locale is Chinese; it was always Chinese.
+
 ## 1.0.3
 
 - Remove the exact Notification Center entry after left-clicking a popup, preserving its existing open action.

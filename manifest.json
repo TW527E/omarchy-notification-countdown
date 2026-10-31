@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "dotfiles.notifications",
   "name": "Notification countdown",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "Desert-sabaku, TW527E",
   "description": "Notification countdown with click-to-remove history and a direct-dismiss button.",
   "kinds": [
