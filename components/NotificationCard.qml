@@ -206,7 +206,9 @@ BorderSurface {
         fontFamily: "Liberation Sans"
         fontSize: Style.space(20)
         foreground: Commons.Color.notifications.text
-        tooltipText: "移除通知"
+        // Follow the system language like the rest of the shell; the plugin's
+        // other text is English.
+        tooltipText: Qt.locale().name.startsWith("zh") ? "移除通知" : "Remove notification"
         Accessible.role: Accessible.Button
         Accessible.name: tooltipText
         Accessible.onPressAction: root.removeRequested()

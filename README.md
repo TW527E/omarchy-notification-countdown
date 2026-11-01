@@ -33,7 +33,6 @@ To install the plugin from a normal desktop terminal:
 
 ```sh
 omarchy plugin add https://github.com/TW527E/omarchy-notification-countdown.git --enable
-
 ```
 
 If already installed, update the plugin instead of adding it again:
@@ -44,7 +43,7 @@ omarchy restart shell
 ```
 
 > [!IMPORTANT]
-> Both service manifests intentionally use `keepLoaded` to preserve timers and live state during unrelated plugin reloads. Updating files or rescanning alone does **not** replace a running service instance.
+> The service manifest intentionally uses `keepLoaded` to preserve timers and live state during unrelated plugin reloads. Updating files or rescanning alone does **not** replace a running service instance.
 > **Restart Omarchy shell from an unlocked desktop session** after an update. Do not restart while the session is locked.
 
 ### Plugin ID & Compatibility
