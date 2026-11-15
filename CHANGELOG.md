@@ -2,6 +2,12 @@
 
 ## 1.0.4
 
+- Notifications with the `transient` hint are shown but never written to the popup or history files.
+- A notification closed by its sender leaves the screen instead of staying until its countdown ends.
+- Showing history no longer dismisses a notification that arrived while history was loading.
+- The running service and the enable script now report and check 1.0.4.
+- Body hyperlinks are no longer advertised, since the card does not open them.
+
 - Show the × button's tooltip and accessible name in English, or in Chinese when the system locale is Chinese; it was always Chinese.
 
 ## 1.0.3

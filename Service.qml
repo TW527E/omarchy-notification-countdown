@@ -98,7 +98,7 @@ Item {
   // many `showHistory` can replay.
   readonly property int historyLimit: 10
 
-  readonly property string implementationVersion: "1.0.3"
+  readonly property string implementationVersion: "1.0.4"
   property int clockRevision: 0
 
   // Outside Variants: each notification has a single timer on all screens.
@@ -173,13 +173,21 @@ Item {
   // Their toasts still land in history like any other once they've been on
   // screen; the distinction only decides whether a DND-silenced one is worth
   // recording at all.
-  function isEphemeral(notification) {
-    var transient = false
+  function isTransient(notification) {
     try {
-      transient = !!(notification.hints && notification.hints["transient"])
-    } catch (e) { transient = false }
-    return transient || NotificationLogic.isEphemeralApp(String(notification.appName || ""))
+      return !!(notification.hints && notification.hints["transient"])
+    } catch (e) { return false }
   }
+
+  function isEphemeral(notification) {
+    return isTransient(notification) || NotificationLogic.isEphemeralApp(String(notification.appName || ""))
+  }
+
+  // Popups whose sender set the freedesktop `transient` hint ("popup only, do
+  // not store"): one-time codes and the like. They are shown and counted down
+  // as usual but never written to the popup or history files. Keyed by popup
+  // file name, the same identity the storage jobs use.
+  property var transientPopups: ({})
 
   function handleNotification(notification) {
     // Without `tracked = true` the Notification object is destroyed as soon
@@ -190,9 +198,15 @@ Item {
     liveRefs[snapshot.originalId] = notification
     // Guard the delete: a newer notification may have reused this originalId
     // (freedesktop replaces_id) and taken over the map slot.
+    var closedBySender = false
     notification.closed.connect(function() {
+      closedBySender = true
       if (service.liveRefs[snapshot.originalId] === notification)
         delete service.liveRefs[snapshot.originalId]
+      // The sender withdrew it (message read elsewhere, call ended): take the
+      // toast down too. When the shell itself dismissed or expired it, the row
+      // is already gone and this finds nothing.
+      service.removeClosedPopup(snapshot.originalId, snapshot.timestamp)
     })
 
     // DND bypass rules: chat apps abuse urgency=critical to force
@@ -211,11 +225,18 @@ Item {
       return
     }
 
+    if (isTransient(notification)) transientPopups[NotificationLogic.popupFileName(snapshot)] = true
     persistPopupFile(snapshot)
     watchForUpdates(notification, snapshot)
     // Qt.callLater avoids "QV4::Object::insertMember" crashes when a
     // Repeater is mid-incubation while we mutate its model.
     Qt.callLater(function() {
+      if (closedBySender) {
+        // Closed before the deferred insert ran: there is no row to remove, so drop its file here.
+        delete service.transientPopups[NotificationLogic.popupFileName(snapshot)]
+        deletePopupFileFor(snapshot)
+        return
+      }
       removePopupsByOriginalId(snapshot.originalId, NotificationLogic.popupFileName(snapshot))
       popupModel.insert(0, snapshot)
       // An update that arrived while the insert was deferred found no row to
@@ -340,6 +361,15 @@ Item {
 
   function dismissPopup(index) {
     removePopup(index, "dismiss")
+  }
+
+  function removeClosedPopup(originalId, timestamp) {
+    for (var i = popupModel.count - 1; i >= 0; i--) {
+      var row = popupModel.get(i)
+      if (!row || row.originalId !== originalId || row.timestamp !== timestamp) continue
+      if (isRestoredRow(row)) continue
+      removePopup(i, "dismiss")
+    }
   }
 
   function expirePopup(index) {
@@ -541,6 +571,7 @@ Item {
   }
 
   function persistPopupFile(snapshot) {
+    if (transientPopups[NotificationLogic.popupFileName(snapshot)]) return
     var persistable = NotificationLogic.persistablePopup(snapshot, imagesDir)
     enqueuePopupFileJob("popup", {
       name: NotificationLogic.popupFileName(snapshot),
@@ -556,6 +587,12 @@ Item {
   // ---------------------------------------------------- history
   //
   function archivePopupFileFor(row, done) {
+    if (row && transientPopups[NotificationLogic.popupFileName(row)]) {
+      // Nothing was stored for a transient popup, so nothing moves to history.
+      delete transientPopups[NotificationLogic.popupFileName(row)]
+      if (done) done()
+      return
+    }
     if (row) enqueuePopupFileJob("archive", {
       name: NotificationLogic.popupFileName(row), limit: historyLimit
     }, done)
@@ -616,6 +653,9 @@ Item {
   // replayHistory archives them, but the directory read is already in flight
   // by then, so they're handed over in memory instead of being waited for.
   property var replayCarryOver: []
+  // File names of the popups on screen when history was requested. Only these
+  // are cleared for the replay; one that arrives while the read runs stays.
+  property var replayClearNames: ({})
 
   // Set from the moment a read is queued until it starts, so a second
   // showHistory while one is still waiting its turn doesn't queue another.
@@ -628,6 +668,9 @@ Item {
     if (storageFailed) return "storage-unavailable"
     if (readHistoryProc.running || service.historyReadQueued) return "ok"
     service.replayCarryOver = liveRowsForReplay()
+    var onScreen = {}
+    for (var i = 0; i < popupModel.count; i++) onScreen[NotificationLogic.popupFileName(popupModel.get(i))] = true
+    service.replayClearNames = onScreen
     service.historyReadQueued = true
     enqueueHistoryRead()
     return "ok"
@@ -689,7 +732,11 @@ Item {
       return
     }
 
-    clearPopups()
+    var clearNames = service.replayClearNames
+    service.replayClearNames = ({})
+    for (var k = popupModel.count - 1; k >= 0; k--) {
+      if (clearNames[NotificationLogic.popupFileName(popupModel.get(k))]) dismissPopup(k)
+    }
     // Rows arrive newest-first, and index 0 is the top of the toast stack.
     for (var i = 0; i < rows.length; i++) {
       // Replayed rows are restored rows: their notification died with the
@@ -934,7 +981,8 @@ Item {
     imageSupported: true
     actionsSupported: true
     bodyMarkupSupported: true
-    bodyHyperlinksSupported: true
+    // The card shows link text but does not open links, so do not advertise it.
+    bodyHyperlinksSupported: false
     persistenceSupported: true
 
     onNotification: function(notification) {

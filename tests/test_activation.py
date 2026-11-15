@@ -36,7 +36,7 @@ if [ "$2" = enable ]; then printf '%s\\n' "$3" >> "$MARKER"; fi
             return result, marker.read_text().splitlines()
 
     def test_exact_implementation_is_accepted(self):
-        result, calls = self.activate(json.dumps(dict(pluginId='dotfiles.notifications', version='1.0.3',
+        result, calls = self.activate(json.dumps(dict(pluginId='dotfiles.notifications', version='1.0.4',
                                                       criticalPopupDuration=15000, sharedCountdown=True, payloadTransport="stdin", storageReady=True)))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(calls, ['dotfiles.notifications'])
@@ -53,7 +53,7 @@ if [ "$2" = enable ]; then printf '%s\\n' "$3" >> "$MARKER"; fi
         self.assertEqual(calls, ['dotfiles.notifications', 'omarchy.notifications'])
 
     def test_unprepared_private_storage_is_not_reported_as_ready(self):
-        result, calls = self.activate(json.dumps(dict(pluginId='dotfiles.notifications', version='1.0.3',
+        result, calls = self.activate(json.dumps(dict(pluginId='dotfiles.notifications', version='1.0.4',
                                                       criticalPopupDuration=15000, sharedCountdown=True,
                                                       payloadTransport='stdin', storageReady=False)))
         self.assertEqual(result.returncode, 1)
