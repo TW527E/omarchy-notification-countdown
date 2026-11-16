@@ -34,7 +34,7 @@ function fixture() {
     popupModel: {get count() { return rows.length; }, get(i) { return rows[i]; },
       remove(i) { rows.splice(i, 1); }, insert(i, row) { rows.splice(i, 0, Object.assign({}, row)); },
       setProperty(i, k, v) { rows[i][k] = v; }},
-    liveRefs: {}, restoredPopups: {}, transientPopups: {}, invokingPopups: {},
+    liveRefs: {}, restoredPopups: {}, transientPopups: {}, invokingPopups: {}, replayCarryOver: [],
     doNotDisturb: false, historyLimit: 10, imagesDir: '/tmp/images/', console,
     updateSignals: ['summaryChanged', 'bodyChanged', 'hintsChanged'],
     enqueuePopupFileJob(action, payload, done) { jobs.push({action, payload}); if (done) done(); },
@@ -156,4 +156,24 @@ assert.equal(f.jobs[1].payload.name, f.jobs[0].payload.name);
 assert.equal(n.tracked, true, 'released only after the entry is gone');
 queued.shift()();
 assert.equal(n.tracked, false);
+''')
+
+    def test_a_toast_that_turns_transient_and_closes_during_the_history_read_stays_out(self):
+        self.run_script(r'''
+const f = fixture();
+for (const name of ['liveRowsForReplay', 'showRecentHistory', 'replayHistory', 'dismissPopup']) {
+  const start = source.indexOf(`  function ${name}(`);
+  vm.runInContext(source.slice(start, source.indexOf('\n  }', start) + 4), f.state);
+}
+Object.assign(f.state, {storageFailed: false, readHistoryProc: {running: false},
+  historyReadQueued: false, enqueueHistoryRead() {}, replayCarryOver: [], replayClearNames: {}});
+f.state.popupModel.append = row => f.rows.push(Object.assign({}, row));
+const n = notification(8, {image: '/tmp/sender/eight.png'});
+f.state.handleNotification(n);
+f.state.showRecentHistory();            // the read is now in flight
+n.hints = {transient: true};
+n.hintsChanged.emit();
+f.state.removePopup(0, 'dismiss');      // closed before the read lands
+f.state.replayHistory('');
+assert.ok(!f.rows.some(r => r.originalId === 8), 'the old snapshot does not come back');
 ''')

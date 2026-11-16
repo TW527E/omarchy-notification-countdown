@@ -336,6 +336,11 @@ Item {
     if (!transientPopups[fileName] && isTransient(notification)) {
       deletePopupFileFor(updated)
       transientPopups[fileName] = true
+      // A history read in flight must not bring the earlier snapshot back,
+      // even if this toast is gone (and its transient mark with it) by then.
+      service.replayCarryOver = service.replayCarryOver.filter(function(row) {
+        return NotificationLogic.popupFileName(row) !== fileName
+      })
     }
 
     var roles = NotificationLogic.popupRoles()
