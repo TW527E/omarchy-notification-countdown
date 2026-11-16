@@ -141,3 +141,13 @@ class PrivateStorageTests(unittest.TestCase):
         self.run_job('delete',dict(name='100-1.json'))
         self.assertEqual(list(self.images.iterdir()),[])
         self.assertFalse((self.popup/'100-1.json').exists())
+
+    def test_forget_removes_only_that_history_entry_and_its_images(self):
+        self.run_job('history',dict(name='100-1.json',json='{}',copies=[],limit=10))
+        self.run_job('history',dict(name='200-2.json',json='{}',copies=[],limit=10))
+        for name in ['100-1-image','200-2-image']:
+            (self.images/name).write_bytes(b'fixture')
+        self.run_job('forget',dict(name='100-1.json'))
+        self.assertEqual(sorted(p.name for p in self.history.iterdir()),['200-2.json'])
+        self.assertEqual([p.name for p in self.images.iterdir()],['200-2-image'])
+        self.run_job('forget',dict(name='100-1.json'))  # already gone: still fine

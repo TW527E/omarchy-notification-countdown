@@ -23,7 +23,7 @@ function fixture(restored = false) {
     NotificationLogic: require('../NotificationLogic.js'),
     popupModel: {get count() { return rows.length; }, get(i) { return rows[i]; },
       remove(i) { rows.splice(i, 1); }},
-    liveRefs: {1: ref}, restoredPopups: restored ? {'100-1.json': true} : {},
+    liveRefs: {1: ref}, restoredPopups: restored ? {'100-1.json': true} : {}, transientPopups: {}, invokingPopups: {},
     historyLimit: 10, console,
     enqueuePopupFileJob(action, payload, done) { jobs.push({action, payload, done}); },
     Quickshell: {execDetached(argv) { ipc.push(Array.from(argv)); }},
