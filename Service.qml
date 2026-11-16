@@ -189,6 +189,11 @@ Item {
   // file name, the same identity the storage jobs use.
   property var transientPopups: ({})
 
+  // Popups whose default action is running right now. Invoking a live
+  // action closes the notification synchronously, and that `closed` must not
+  // remove the row: invokePopupDefault removes it itself, as handled.
+  property var invokingPopups: ({})
+
   function handleNotification(notification) {
     // Without `tracked = true` the Notification object is destroyed as soon
     // as this signal handler returns, which would null out the `ref` we just
@@ -206,6 +211,7 @@ Item {
       // The sender withdrew it (message read elsewhere, call ended): take the
       // toast down too. When the shell itself dismissed or expired it, the row
       // is already gone and this finds nothing.
+      if (service.invokingPopups[NotificationLogic.popupFileName(snapshot)]) return
       service.removeClosedPopup(snapshot.originalId, snapshot.timestamp)
     })
 
@@ -259,7 +265,8 @@ Item {
       } catch (e) {
         // Torn down by the server while the write was queued.
       }
-      if (updated && NotificationLogic.popupRowChanged(written, updated)) {
+      // An update that asks not to be stored is not written over the entry.
+      if (updated && NotificationLogic.popupRowChanged(written, updated) && !service.isTransient(notification)) {
         service.writeSilenced(notification, updated)
         return
       }
@@ -313,6 +320,15 @@ Item {
     } catch (e) {
       // Object torn down by the server while the signal was in flight.
       return
+    }
+
+    // A replacement can add the `transient` hint to a stored notification:
+    // from then on nothing of it may stay on disk, including the file the
+    // earlier version was written to.
+    var fileName = NotificationLogic.popupFileName(updated)
+    if (!transientPopups[fileName] && isTransient(notification)) {
+      deletePopupFileFor(updated)
+      transientPopups[fileName] = true
     }
 
     var roles = NotificationLogic.popupRoles()
@@ -441,7 +457,13 @@ Item {
         for (var i = 0; i < ref.actions.length; i++) {
           var action = ref.actions[i]
           if (action && action.identifier === "default") {
-            action.invoke()
+            var invoking = NotificationLogic.popupFileName(entry)
+            invokingPopups[invoking] = true
+            try {
+              action.invoke()
+            } finally {
+              delete invokingPopups[invoking]
+            }
             invoked = true
             break
           }
