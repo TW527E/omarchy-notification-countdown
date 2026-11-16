@@ -90,3 +90,22 @@ assert.equal(f.rows[0].summary, 'one-time code 123456', 'still shown');
 f.state.removePopup(0, 'dismiss');
 assert.ok(!f.jobs.some(j => j.action === 'archive'), 'nothing archived to history');
 ''')
+
+    def test_history_replay_leaves_a_transient_toast_alone(self):
+        self.run_script(r'''
+const f = fixture();
+for (const name of ['liveRowsForReplay', 'showRecentHistory']) {
+  const start = source.indexOf(`  function ${name}(`);
+  vm.runInContext(source.slice(start, source.indexOf('\n  }', start) + 4), f.state);
+}
+Object.assign(f.state, {storageFailed: false, readHistoryProc: {running: false},
+  historyReadQueued: false, enqueueHistoryRead() {}});
+f.state.handleNotification(notification(1, {image: '/tmp/sender/one.png'}));
+f.state.handleNotification(notification(2, {hints: {transient: true}, image: '/tmp/sender/code.png'}));
+f.state.showRecentHistory();
+const carried = Array.from(f.state.replayCarryOver, r => r.originalId);
+assert.deepEqual(carried, [1], 'only the stored toast is carried into the replay');
+const cleared = Object.keys(f.state.replayClearNames);
+assert.equal(cleared.length, 1);
+assert.match(cleared[0], /-1\.json$/, 'the transient toast is not cleared');
+''')

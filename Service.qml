@@ -691,7 +691,11 @@ Item {
     if (readHistoryProc.running || service.historyReadQueued) return "ok"
     service.replayCarryOver = liveRowsForReplay()
     var onScreen = {}
-    for (var i = 0; i < popupModel.count; i++) onScreen[NotificationLogic.popupFileName(popupModel.get(i))] = true
+    for (var i = 0; i < popupModel.count; i++) {
+      var name = NotificationLogic.popupFileName(popupModel.get(i))
+      // A transient toast has no stored copy to replay; it stays as it is.
+      if (!transientPopups[name]) onScreen[name] = true
+    }
     service.replayClearNames = onScreen
     service.historyReadQueued = true
     enqueueHistoryRead()
@@ -713,6 +717,9 @@ Item {
     for (var i = 0; i < popupModel.count; i++) {
       var row = popupModel.get(i)
       if (!row || row.originalId < 0) continue
+      // Transient toasts are not history: nothing of them was stored (no
+      // image copies either), and they stay on screen instead of being replayed.
+      if (transientPopups[NotificationLogic.popupFileName(row)]) continue
       rows.push(NotificationLogic.persistablePopup({
         id: row.id,
         originalId: row.originalId,
