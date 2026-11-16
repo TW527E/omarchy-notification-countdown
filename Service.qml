@@ -738,9 +738,17 @@ Item {
   }
 
   function replayHistory(raw) {
+    // A toast can turn transient while the read runs. It stays on screen as
+    // it is, and neither its carried-over snapshot nor the stored file that
+    // refreshPopup is deleting may come back as a history row.
+    var transientNow = transientPopups
+    var hidden = Object.keys(transientNow).length
     var rows = NotificationLogic.historyRows(
-      raw, service.replayCarryOver, NotificationUrgency.Normal, service.historyLimit)
+      raw, service.replayCarryOver, NotificationUrgency.Normal, service.historyLimit + hidden)
     service.replayCarryOver = []
+    rows = rows.filter(function(row) {
+      return !transientNow[NotificationLogic.popupFileName(row)]
+    }).slice(0, Math.max(0, service.historyLimit))
 
     // Replaying nothing at all looks like a dead keybinding, so say so.
     if (rows.length === 0) {
@@ -764,7 +772,8 @@ Item {
     var clearNames = service.replayClearNames
     service.replayClearNames = ({})
     for (var k = popupModel.count - 1; k >= 0; k--) {
-      if (clearNames[NotificationLogic.popupFileName(popupModel.get(k))]) dismissPopup(k)
+      var name = NotificationLogic.popupFileName(popupModel.get(k))
+      if (clearNames[name] && !transientNow[name]) dismissPopup(k)
     }
     // Rows arrive newest-first, and index 0 is the top of the toast stack.
     for (var i = 0; i < rows.length; i++) {

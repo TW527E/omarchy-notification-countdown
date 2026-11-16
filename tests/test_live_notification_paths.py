@@ -109,3 +109,28 @@ const cleared = Object.keys(f.state.replayClearNames);
 assert.equal(cleared.length, 1);
 assert.match(cleared[0], /-1\.json$/, 'the transient toast is not cleared');
 ''')
+
+    def test_a_toast_that_turns_transient_during_the_history_read_stays(self):
+        self.run_script(r'''
+const f = fixture();
+for (const name of ['liveRowsForReplay', 'showRecentHistory', 'replayHistory', 'dismissPopup']) {
+  const start = source.indexOf(`  function ${name}(`);
+  vm.runInContext(source.slice(start, source.indexOf('\n  }', start) + 4), f.state);
+}
+Object.assign(f.state, {storageFailed: false, readHistoryProc: {running: false},
+  historyReadQueued: false, enqueueHistoryRead() {}, replayCarryOver: [], replayClearNames: {}});
+f.rows.append = row => f.rows.push(Object.assign({}, row));
+f.state.popupModel.append = f.rows.append;
+const n = notification(7, {image: '/tmp/sender/seven.png'});
+f.state.handleNotification(n);
+f.state.showRecentHistory();            // the read is now in flight
+n.hints = {transient: true};
+n.summary = 'one-time code 654321';
+n.hintsChanged.emit();
+n.summaryChanged.emit();
+f.state.replayHistory('');              // the read lands
+const live = f.rows.filter(r => r.originalId === 7);
+assert.equal(live.length, 1, 'no restored copy next to the live toast');
+assert.equal(live[0].summary, 'one-time code 654321', 'the live, updated toast is the one kept');
+assert.ok(!f.state.restoredPopups[Object.keys(f.state.transientPopups)[0]], 'not marked as restored');
+''')
