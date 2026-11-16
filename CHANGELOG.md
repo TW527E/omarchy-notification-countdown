@@ -3,7 +3,7 @@
 ## 1.0.4
 
 - Notifications with the `transient` hint are shown but never written to the popup or history files.
-- A sender that adds the `transient` hint in an update also has the earlier stored copy removed.
+- A sender that adds the `transient` hint in an update also has the earlier stored copy removed, including the history entry written while Do Not Disturb was on.
 - Showing history leaves a `transient` notification on screen instead of replacing it with a copy whose images were never saved, also when it turned transient while history was loading.
 - Clicking a notification whose app closes it while running the action no longer removes the toast next to it.
 - A notification closed by its sender leaves the screen instead of staying until its countdown ends.

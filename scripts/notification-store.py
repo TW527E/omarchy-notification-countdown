@@ -186,6 +186,10 @@ def perform_locked(action, root, job):
     elif action == 'delete':
         (popup / name).unlink(missing_ok=True)
         delete_images(images, name)
+    elif action == 'forget':
+        # A history entry whose sender later asked not to be stored (transient).
+        (history / name).unlink(missing_ok=True)
+        delete_images(images, name)
     else:
         raise ValueError('Unknown storage operation')
 

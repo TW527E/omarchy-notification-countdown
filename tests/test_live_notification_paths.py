@@ -134,3 +134,26 @@ assert.equal(live.length, 1, 'no restored copy next to the live toast');
 assert.equal(live[0].summary, 'one-time code 654321', 'the live, updated toast is the one kept');
 assert.ok(!f.state.restoredPopups[Object.keys(f.state.transientPopups)[0]], 'not marked as restored');
 ''')
+
+    def test_a_silenced_notification_that_turns_transient_is_taken_out_of_history(self):
+        self.run_script(r'''
+const f = fixture();
+for (const name of ['writeSilenced', 'releaseSilenced', 'writeHistoryFile']) {
+  const start = source.indexOf(`  function ${name}(`);
+  vm.runInContext(source.slice(start, source.indexOf('\n  }', start) + 4), f.state);
+}
+// Hold the history write so the update lands while it is queued.
+const queued = [];
+f.state.enqueuePopupFileJob = (action, payload, done) => { f.jobs.push({action, payload}); queued.push(done); };
+const n = notification(9, {image: '/tmp/sender/nine.png', tracked: true});
+const written = f.state.snapshotOf(n);
+f.state.writeSilenced(n, written);
+n.hints = {transient: true};
+n.summary = 'one-time code 111222';
+queued.shift()();                       // the history write finishes
+assert.deepEqual(f.jobs.map(j => j.action), ['history', 'forget'], 'the written entry is taken back');
+assert.equal(f.jobs[1].payload.name, f.jobs[0].payload.name);
+assert.equal(n.tracked, true, 'released only after the entry is gone');
+queued.shift()();
+assert.equal(n.tracked, false);
+''')

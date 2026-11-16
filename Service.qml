@@ -265,8 +265,15 @@ Item {
       } catch (e) {
         // Torn down by the server while the write was queued.
       }
-      // An update that asks not to be stored is not written over the entry.
-      if (updated && NotificationLogic.popupRowChanged(written, updated) && !service.isTransient(notification)) {
+      if (updated && service.isTransient(notification)) {
+        // The sender added `transient` after this was written: take the entry
+        // and its image copies back out of history instead of updating it.
+        service.enqueuePopupFileJob("forget", { name: NotificationLogic.popupFileName(written) }, function() {
+          service.releaseSilenced(notification, written.originalId)
+        })
+        return
+      }
+      if (updated && NotificationLogic.popupRowChanged(written, updated)) {
         service.writeSilenced(notification, updated)
         return
       }
